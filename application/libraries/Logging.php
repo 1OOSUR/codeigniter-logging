@@ -42,11 +42,16 @@ class Logging
     {
         if (!array_key_exists($logger, $this->_loggers))
         {
-            throw new Exception();
+            throw new LoggingException('Logger with name ' . $logger . ' does not exist.');
         }
 
         return $this->_loggers[$logger];
     }
+}
+
+class LoggingException extends Exception
+{
+
 }
 
 abstract class Logger
@@ -174,6 +179,8 @@ class FileLogger extends Logger
         $this->check_file_path_exists_and_is_writeable();
 
         $this->set_file_name();
+
+        $this->enabled = TRUE;
     }
 
     protected function do_log($log_entry)
@@ -206,7 +213,7 @@ class FileLogger extends Logger
 
         if (!is_dir($this->_file_path) OR !is_really_writable($this->_file_path))
         {
-            throw new Exception($this->_file_path . ' is not a directory to which logs can be written, and the directory could not be created. Please check your logging settings.');
+            throw new LoggingException($this->_file_path . ' is not a directory to which logs can be written, and the directory could not be created. Please check your logging settings.');
         }
     }
 
@@ -233,18 +240,73 @@ class EmailLogger extends Logger
 {
     private $_from;
     private $_to;
+    private $_subject;
+
+    public function set_to($to)
+    {
+        $this->_to = $to;
+    }
+
+    public function set_subject($subject)
+    {
+        $this->_subject = $subject;
+    }
+
+    public function set_from($from)
+    {
+        $this->_from = $from;
+    }
+
+    public function get_from()
+    {
+        return $this->_from;
+    }
+
+    public function get_subject()
+    {
+        return $this->_subject;
+    }
+
+    public function get_to()
+    {
+        return $this->_to;
+    }
 
     public function initialise($params)
     {
+        if (!array_key_exists('from', $params))
+        {
+            throw new LoggingException('The email logger ' . $this->get_name() . ' needs a from address in its config.');
+        }
+        else if (!array_key_exists('to', $params))
+        {
+            throw new LoggingException('The email logger ' . $this->get_name() . ' needs a to address in its config.');
+        }
+        else if (!array_key_exists('subject', $params))
+        {
+            throw new LoggingException('The email logger ' . $this->get_name() . ' needs a subject in its config.');
+        }
+        else
+        {
+            $this->enabled = TRUE;
 
+            $this->set_from($params['from']);
+            $this->set_to($params['to']);
+            $this->set_subject($params['subject']);
+        }
     }
 
     protected function do_log($log_entry)
     {
         $this->CI->load->library('email');
 
-        $this->CI->email->from($this->_from);
-        $this->CI->email->to($this->_to);
+        $this->CI->email->from($this->get_from());
+        $this->CI->email->to($this->get_to());
+        $this->CI->email->subject($this->get_subject());
+
+        $this->CI->email->message($log_entry);
+
+        $this->CI->email->send();
     }
 }
 
