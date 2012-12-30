@@ -1,5 +1,7 @@
 <?php
 
+// Sample configuration for the logging library
+
 $config = array(
     'simple' => array(
         'level' => 'INFO',
@@ -13,5 +15,6 @@ $config = array(
         'format' => "{date} - {level}: {message}",
         'to' => 'sjwood25890@gmail.com',
         'from' => 'noreply@example.com',
+        'subject' => 'New critical logging message'
     )
 );
